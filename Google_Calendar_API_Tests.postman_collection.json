@@ -1,0 +1,26 @@
+{
+  "info": {
+    "name": "Google Calendar API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Authorization URL",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8080/api/calendars/google/auth?userId=test@example.com"
+        }
+      }
+    },
+    {
+      "name": "Sync Calendar",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8080/api/calendars/google/sync?userId=test@example.com&calendarId=primary"
+        }
+      }
+    }
+  ]
+} 
