@@ -1,31 +1,34 @@
 package com.calendar.service;
 
-import com.calendar.model.CalendarDo;
-import com.calendar.model.CalendarEvent;
-import com.calendar.model.CalendarType;
-import com.calendar.repository.CalendarRepository;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
+import com.calendar.model.CalendarEntity;
 import com.calendar.repository.CalendarEventRepository;
-import com.calendar.exception.CalendarSyncException;
+import com.calendar.repository.CalendarRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.fortuna.ical4j.model.DateTime;
-import net.fortuna.ical4j.model.property.*;
-import org.osaf.caldav4j.CalDAVCollection;
-import org.osaf.caldav4j.CalDAVConstants;
-import org.osaf.caldav4j.methods.HttpClient;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import net.fortuna.ical4j.data.CalendarBuilder;
+import net.fortuna.ical4j.data.CalendarOutputter;
+import net.fortuna.ical4j.data.ParserException;
 import net.fortuna.ical4j.model.Calendar;
-import net.fortuna.ical4j.model.Component;
+import net.fortuna.ical4j.model.DateTime;
+import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.component.VEvent;
-import org.apache.commons.httpclient.HostConfiguration;
-import org.osaf.caldav4j.methods.CalDAV4JMethodFactory;
-
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.List;
-import java.util.Date;
-import java.util.Optional;
+import net.fortuna.ical4j.model.property.DtEnd;
+import net.fortuna.ical4j.model.property.DtStart;
+import net.fortuna.ical4j.model.property.Location;
+import net.fortuna.ical4j.model.property.ProdId;
+import net.fortuna.ical4j.model.property.Summary;
+import net.fortuna.ical4j.model.property.Uid;
+import net.fortuna.ical4j.model.property.Version;
 
 @Service
 @Slf4j
@@ -35,191 +38,104 @@ public class CalDavService {
     private final CalendarRepository calendarRepository;
     private final CalendarEventRepository eventRepository;
 
-    @Value("${caldav.server.protocol}")
-    private String protocol;
-
-    @Value("${caldav.server.host}")
-    private String host;
-
-    @Value("${caldav.server.port}")
-    private int port;
-
-    /**
-     * 同步CalDAV日历
-     */
-    public void syncCalendar(String calendarUrl, String username, String password) {
+    public void createCalendar(String username, String password, String calendarName) {
         try {
-            log.info("开始同步CalDAV日历: {}", calendarUrl);
+            log.info("开始创建CalDAV日历: {}", calendarName);
 
-            // 创建HTTP客户端
-            HttpClient httpClient = new HttpClient();
-            httpClient.getState().setCredentials(
-                new org.apache.commons.httpclient.auth.AuthScope(host, port),
-                new org.apache.commons.httpclient.UsernamePasswordCredentials(username, password)
-            );
+            // @todo 校验用户是否存在
+            // @todo 鉴权：校验用户名密码
+            // @todo 校验日历是否存在
+            // 创建一个简单的iCalendar对象
+            Calendar calendar = new Calendar();
+            calendar.getProperties().add(new ProdId("-//My Company//iCal4j 1.0//EN"));
+            calendar.getProperties().add(Version.VERSION_2_0);
 
-            // 创建CalDAV集合
-            String fullUrl = String.format("%s://%s:%d%s", protocol, host, port, calendarUrl);
-            HostConfiguration hostConfig = new HostConfiguration();
-            hostConfig.setHost(host, port, protocol);
-            CalDAV4JMethodFactory methodFactory = new CalDAV4JMethodFactory();
-            CalDAVCollection collection = new CalDAVCollection(
-                fullUrl,
-                hostConfig,
-                methodFactory,
-                CalDAVConstants.PROC_ID_DEFAULT
-            );
+            // 添加事件到日历
+            VEvent event = new VEvent();
+            calendar.getComponents().add(event);
 
-            // 获取或创建日历
-            CalendarDo calendar = calendarRepository.findByExternalId(calendarUrl)
-                .orElseGet(() -> {
-                    CalendarDo newCalendar = new CalendarDo();
-                    newCalendar.setExternalId(calendarUrl);
-                    newCalendar.setName("CalDAV Calendar");
-                    newCalendar.setType(CalendarType.GOOGLE);
-                    newCalendar.setOwner(username);
-                    newCalendar.setLastSync(LocalDateTime.now());
-                    return calendarRepository.save(newCalendar);
-                });
+            // 保存到.ics文件
+            String filePath = calendarName + ".ics";
+            File file = new File(filePath);
+            try (FileOutputStream fout = new FileOutputStream(file)) {
+                CalendarOutputter outputter = new CalendarOutputter();
+                outputter.output(calendar, fout);
+                log.info("日历已保存到文件: {}", file.getAbsolutePath());
+                System.out.println("日历已保存到文件: " + file.getAbsolutePath());
+            }
 
-            // 获取所有事件
-            List<Calendar> events = collection.multigetCalendarUris(httpClient, null);
-          
-            for (Calendar calEvent : events) {
-                try {
-                    for (Component component : calEvent.getComponents(Component.VEVENT)) {
-                        processCalDavEvent((VEvent) component, calendar);
-                    }
-                } catch (Exception e) {
-                    log.error("处理CalDAV事件失败: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("创建CalDAV日历失败: {}", e.getMessage());
+            throw new RuntimeException("创建CalDAV日历失败", e);
+        }
+    }
+
+
+    public void createCalendarEvent(String calendarUrl, String summary, String location, DateTime start, DateTime end) throws IOException {
+        // 读取现有的.ics文件
+        File file = new File(calendarUrl);
+        Calendar calendar;
+        try (FileInputStream fin = new FileInputStream(file)) {
+            CalendarBuilder builder = new CalendarBuilder();
+            calendar = builder.build(fin);
+        } catch (ParserException e) {
+            throw new RuntimeException(e);
+        }
+
+        // 创建事件
+        VEvent event = new VEvent(start, end, summary);
+        event.getProperties().add(new Location(location));
+        event.getProperties().add(new Uid(UUID.randomUUID().toString()));
+
+        // 添加事件到现有日历
+        calendar.getComponents().add(event);
+
+        // 保存更新后的日历到.ics文件
+        try (FileOutputStream fout = new FileOutputStream(file)) {
+            CalendarOutputter outputter = new CalendarOutputter();
+            outputter.output(calendar, fout);
+            log.info("事件已添加到日历文件: {}", file.getAbsolutePath());
+        }
+    }
+
+    public void updateCalendarEvent(String calendarUrl, String eventUid, String newSummary, String newLocation, DateTime newStart, DateTime newEnd) throws IOException, ParseException {
+        // 读取现有的.ics文件
+        File file = new File(calendarUrl);
+        Calendar calendar;
+        try (FileInputStream fin = new FileInputStream(file)) {
+            CalendarBuilder builder = new CalendarBuilder();
+            calendar = builder.build(fin);
+        } catch (ParserException e) {
+            throw new RuntimeException(e);
+        }
+
+        // 查找并更新事件
+        VEvent eventToUpdate = null;
+        for (Object component : calendar.getComponents()) {
+            if (component instanceof VEvent) {
+                VEvent event = (VEvent) component;
+                if (event.getUid().getValue().equals(eventUid)) {
+                    eventToUpdate = event;
+                    break;
                 }
             }
-
-            // 更新同步时间
-            calendar.setLastSync(LocalDateTime.now());
-            calendarRepository.save(calendar);
-            
-            log.info("CalDAV日历同步完成");
-
-        } catch (Exception e) {
-            log.error("同步CalDAV日历失败: {}", e.getMessage());
-            throw new CalendarSyncException("同步CalDAV日历失败", e);
-        }
-    }
-
-    /**
-     * 处理单个CalDAV事件
-     */
-    private void processCalDavEvent(VEvent event, CalendarDo calendar) {
-        if (event == null) {
-            return;
         }
 
-        String eventId = event.getUid().getValue();
-        Optional<CalendarEvent> existingEvent = eventRepository.findByExternalId(eventId);
-
-        // 转换事件时间
-        Date startDate = event.getStartDate().getDate();
-        Date endDate = event.getEndDate().getDate();
-        
-        LocalDateTime startTime = LocalDateTime.ofInstant(
-            startDate.toInstant(),
-            ZoneId.systemDefault()
-        );
-        LocalDateTime endTime = LocalDateTime.ofInstant(
-            endDate.toInstant(),
-            ZoneId.systemDefault()
-        );
-
-        if (existingEvent != null) {
-            CalendarEvent calendarEvent = existingEvent.get();
-            // 更新现有事件
-            calendarEvent.setSummary(event.getSummary().getValue());
-            calendarEvent.setDescription(
-                event.getDescription() != null ? 
-                event.getDescription().getValue() : null
-            );
-            calendarEvent.setLocation(
-                event.getLocation() != null ? 
-                event.getLocation().getValue() : null
-            );
-            calendarEvent.setStartTime(startTime);
-            calendarEvent.setEndTime(endTime);
-            eventRepository.save(calendarEvent);
-            log.debug("更新事件: {}", eventId);
+        if (eventToUpdate != null) {
+            ((Summary) eventToUpdate.getProperty(Property.SUMMARY)).setValue(newSummary);
+            ((Location) eventToUpdate.getProperty(Property.LOCATION)).setValue(newLocation);
+            ((DtStart) eventToUpdate.getProperty(Property.DTSTART)).setValue(newStart.toString());
+            ((DtEnd) eventToUpdate.getProperty(Property.DTEND)).setValue(newEnd.toString());
         } else {
-            // 创建新事件
-            CalendarEvent newEvent = new CalendarEvent();
-            newEvent.setExternalId(eventId);
-            newEvent.setCalendar(calendar);
-            newEvent.setTitle(event.getSummary().getValue());
-            newEvent.setDescription(
-                event.getDescription() != null ? 
-                event.getDescription().getValue() : null
-            );
-            newEvent.setLocation(
-                event.getLocation() != null ? 
-                event.getLocation().getValue() : null
-            );
-            newEvent.setStartTime(startTime);
-            newEvent.setEndTime(endTime);
-            eventRepository.save(newEvent);
-            log.debug("创建新事件: {}", eventId);
+            throw new IOException("事件未找到: " + eventUid);
+        }
+
+        // 保存更新后的日历到.ics文件
+        try (FileOutputStream fout = new FileOutputStream(file)) {
+            CalendarOutputter outputter = new CalendarOutputter();
+            outputter.output(calendar, fout);
+            log.info("事件已更新到日历文件: {}", file.getAbsolutePath());
         }
     }
 
-    /**
-     * 添加新事件到CalDAV日历
-     */
-    public void addEvent(String calendarUrl, String username, String password, CalendarEvent event) {
-        try {
-            // 创建HTTP客户端
-            HttpClient httpClient = new HttpClient();
-            httpClient.getState().setCredentials(
-                    new org.apache.commons.httpclient.auth.AuthScope(host, port),
-                    new org.apache.commons.httpclient.UsernamePasswordCredentials(username, password)
-            );
-
-            // 创建CalDAV集合
-            String fullUrl = String.format("%s://%s:%d%s", protocol, host, port, calendarUrl);
-            HostConfiguration hostConfig = new HostConfiguration();
-            hostConfig.setHost(host, port, protocol);
-            CalDAV4JMethodFactory methodFactory = new CalDAV4JMethodFactory();
-            CalDAVCollection collection = new CalDAVCollection(
-                fullUrl,
-                hostConfig,
-                methodFactory,
-                CalDAVConstants.PROC_ID_DEFAULT
-            );
-
-            // 创建iCal事件
-            VEvent vEvent = new VEvent();
-            vEvent.getProperties().add(new Uid(event.getExternalId()));  // 使用Uid类
-            vEvent.getProperties().add(new Summary(event.getTitle()));
-            if (event.getDescription() != null) {
-                vEvent.getProperties().add(new Description(event.getDescription()));
-            }
-            if (event.getLocation() != null) {
-                vEvent.getProperties().add(new Location(event.getLocation()));
-            }
-            vEvent.getProperties().add(new DtStart(
-                    new DateTime(Date.from(event.getStartTime().atZone(ZoneId.systemDefault()).toInstant()))
-            ));
-            vEvent.getProperties().add(new DtEnd(
-                    new DateTime(Date.from(event.getEndTime().atZone(ZoneId.systemDefault()).toInstant()))
-            ));
-
-            // 创建日历对象并添加事件
-            Calendar calendar = new Calendar();
-            calendar.getComponents().add(vEvent);
-
-            // 添加事件到CalDAV服务器
-            collection.add(httpClient, calendar);
-            log.info("CalDAV事件添加成功: {}", event.getExternalId());
-
-        } catch (Exception e) {
-            log.error("添加CalDAV事件失败: {}", e.getMessage());
-            throw new CalendarSyncException("添加CalDAV事件失败", e);
-        }
-    }
 } 

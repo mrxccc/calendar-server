@@ -1,26 +1,177 @@
 {
   "info": {
+    "_postman_id": "c1f2e3d4-a5b6-7c8d-9e0f-1a2b3c4d5e6f",
     "name": "Google Calendar API Tests",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Get Authorization URL",
-      "request": {
-        "method": "GET",
-        "url": {
-          "raw": "http://localhost:8080/api/calendars/google/auth?userId=test@example.com"
+      "name": "OAuth2 Authentication",
+      "item": [
+        {
+          "name": "Get Access Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}",
+                  "type": "text"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code",
+                  "type": "text"
+                },
+                {
+                  "key": "code",
+                  "value": "{{auth_code}}",
+                  "type": "text"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirect_uri}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://oauth2.googleapis.com/token",
+              "protocol": "https",
+              "host": ["oauth2", "googleapis", "com"],
+              "path": ["token"]
+            }
+          },
+          "response": []
         }
-      }
+      ]
     },
     {
-      "name": "Sync Calendar",
-      "request": {
-        "method": "POST",
-        "url": {
-          "raw": "http://localhost:8080/api/calendars/google/sync?userId=test@example.com&calendarId=primary"
+      "name": "Calendar Operations",
+      "item": [
+        {
+          "name": "Get Calendar List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+              "protocol": "https",
+              "host": ["www", "googleapis", "com"],
+              "path": ["calendar", "v3", "users", "me", "calendarList"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"Test Event\",\n  \"location\": \"Online\",\n  \"description\": \"This is a test event\",\n  \"start\": {\n    \"dateTime\": \"2023-12-25T09:00:00-07:00\",\n    \"timeZone\": \"America/Los_Angeles\"\n  },\n  \"end\": {\n    \"dateTime\": \"2023-12-25T17:00:00-07:00\",\n    \"timeZone\": \"America/Los_Angeles\"\n  }\n}"
+            },
+            "url": {
+              "raw": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+              "protocol": "https",
+              "host": ["www", "googleapis", "com"],
+              "path": ["calendar", "v3", "calendars", "primary", "events"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Event",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"Updated Test Event\",\n  \"location\": \"Office\",\n  \"description\": \"This is an updated test event\"\n}"
+            },
+            "url": {
+              "raw": "https://www.googleapis.com/calendar/v3/calendars/primary/events/{{event_id}}",
+              "protocol": "https",
+              "host": ["www", "googleapis", "com"],
+              "path": ["calendar", "v3", "calendars", "primary", "events", "{{event_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Event",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://www.googleapis.com/calendar/v3/calendars/primary/events/{{event_id}}",
+              "protocol": "https",
+              "host": ["www", "googleapis", "com"],
+              "path": ["calendar", "v3", "calendars", "primary", "events", "{{event_id}}"]
+            }
+          },
+          "response": []
         }
-      }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "client_id",
+      "value": "YOUR_CLIENT_ID"
+    },
+    {
+      "key": "client_secret",
+      "value": "YOUR_CLIENT_SECRET"
+    },
+    {
+      "key": "redirect_uri",
+      "value": "YOUR_REDIRECT_URI"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "event_id",
+      "value": ""
     }
   ]
-} 
+}

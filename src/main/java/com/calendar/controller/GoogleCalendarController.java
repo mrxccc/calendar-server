@@ -1,7 +1,9 @@
 package com.calendar.controller;
 
+import com.calendar.exception.CalendarSyncException;
 import com.calendar.service.GoogleCalendarService;
 import com.calendar.service.GoogleOAuth2Service;
+import com.google.api.services.calendar.model.Event;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Google日历控制器
@@ -51,4 +54,40 @@ public class GoogleCalendarController {
                 });
         return ResponseEntity.accepted().build();
     }
-} 
+
+
+    /**
+     * 获取指定日历的事件
+     *
+     * @param userId 用户ID
+     * @param calendarId 日历ID
+     * @return 事件列表
+     */
+    @GetMapping("/{userId}/events/{calendarId}")
+    public ResponseEntity<List<Event>> listEvents(@PathVariable String userId, @PathVariable String calendarId) {
+        try {
+            List<Event> events = calendarService.listEvents(userId, calendarId);
+            return ResponseEntity.ok(events);
+        } catch (CalendarSyncException e) {
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    /**
+     * 删除指定日历中的事件
+     *
+     * @param userId 用户ID
+     * @param calendarId 日历ID
+     * @param eventId 事件ID
+     * @return 删除结果
+     */
+    @DeleteMapping("/{userId}/events/{calendarId}/{eventId}")
+    public ResponseEntity<Void> deleteEvent(@PathVariable String userId, @PathVariable String calendarId, @PathVariable String eventId) {
+        try {
+            calendarService.deleteEvent(userId, calendarId, eventId);
+            return ResponseEntity.noContent().build();
+        } catch (CalendarSyncException e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+}

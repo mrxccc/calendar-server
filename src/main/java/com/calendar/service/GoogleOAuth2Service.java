@@ -72,16 +72,16 @@ public class GoogleOAuth2Service {
         while (currentTry < maxRetries) {
             try {
                 log.info("开始处理OAuth回调, 用户ID: {}, 尝试次数: {}", userId, currentTry + 1);
-                
+
                 // 配置HTTP传输和代理
                 HttpTransport transport;
                 if (proxyConfig.isProxyConfigured()) {
                     log.info("使用代理配置: {}:{}", proxyConfig.getProxyHost(), proxyConfig.getProxyPort());
                     HttpHost proxy = new HttpHost(
-                        proxyConfig.getProxyHost(), 
+                        proxyConfig.getProxyHost(),
                         Integer.parseInt(proxyConfig.getProxyPort())
                     );
-                    
+
                     transport = new ApacheHttpTransport(
                         HttpClientBuilder.create()
                             .setProxy(proxy)
@@ -90,7 +90,7 @@ public class GoogleOAuth2Service {
                 } else {
                     transport = new NetHttpTransport();
                 }
-                
+
                 // 设置超时
                 transport.createRequestFactory(request -> {
                     request.setConnectTimeout((int) TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS));
@@ -103,7 +103,7 @@ public class GoogleOAuth2Service {
                     JacksonFactory.getDefaultInstance(),
                     new InputStreamReader(credentialsPath.getInputStream())
                 );
-                
+
                 GoogleAuthorizationCodeFlow newFlow = new GoogleAuthorizationCodeFlow.Builder(
                     transport,
                     JacksonFactory.getDefaultInstance(),
@@ -111,7 +111,7 @@ public class GoogleOAuth2Service {
                     flow.getScopes())
                     .setAccessType("offline")
                     .build();
-                
+
                 GoogleTokenResponse response = newFlow.newTokenRequest(code)
                     .setRedirectUri(callbackUri)
                     .execute();
@@ -124,9 +124,9 @@ public class GoogleOAuth2Service {
             } catch (IOException e) {
                 lastException = e;
                 currentTry++;
-                log.warn("OAuth回调处理失败，尝试次数：{}/{}，错误类型：{}，错误消息：{}", 
+                log.warn("OAuth回调处理失败，尝试次数：{}/{}，错误类型：{}，错误消息：{}",
                         currentTry, maxRetries, e.getClass().getSimpleName(), e.getMessage());
-                
+
                 if (currentTry < maxRetries) {
                     try {
                         int waitTime = 1000 * currentTry;
@@ -139,7 +139,7 @@ public class GoogleOAuth2Service {
                 }
             }
         }
-        
+
         log.error("OAuth回调处理最终失败，详细错误：", lastException);
         throw new IOException("OAuth回调处理失败，已重试" + maxRetries + "次", lastException);
     }
@@ -150,4 +150,4 @@ public class GoogleOAuth2Service {
     public Credential getCredential(String userId) throws IOException {
         return flow.loadCredential(userId);
     }
-} 
+}

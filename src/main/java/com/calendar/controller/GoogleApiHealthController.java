@@ -30,4 +30,4 @@ public class GoogleApiHealthController {
             return ResponseEntity.status(503).body("Google API 无法访问");
         }
     }
-} 
+}

@@ -1,33 +1,37 @@
 package com.calendar.service;
 
-import com.calendar.model.CalendarDo;
-import com.calendar.model.CalendarType;
-import com.google.api.services.calendar.model.CalendarList;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.services.calendar.Calendar;
-import com.google.api.services.calendar.model.Events;
-import com.google.api.services.calendar.model.Event;
-import com.calendar.repository.CalendarRepository;
-import com.calendar.repository.CalendarEventRepository;
-import com.calendar.exception.CalendarSyncException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import jakarta.annotation.PostConstruct;
-import java.util.concurrent.CompletableFuture;
-import java.util.List;
-import com.google.api.client.util.DateTime;
+
+import com.calendar.exception.CalendarSyncException;
+import com.calendar.model.CalendarDo;
 import com.calendar.model.CalendarEvent;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Optional;
-import java.util.Date;
+import com.calendar.model.CalendarType;
+import com.calendar.repository.CalendarEventRepository;
+import com.calendar.repository.CalendarRepository;
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.DateTime;
+import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.model.CalendarList;
+import com.google.api.services.calendar.model.CalendarListEntry;
+import com.google.api.services.calendar.model.Event;
+import com.google.api.services.calendar.model.Events;
+
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Google日历服务
@@ -270,6 +274,109 @@ public class GoogleCalendarService {
         } catch (Exception e) {
             log.error("更新同步令牌失败: {}", e.getMessage());
             throw new CalendarSyncException("更新同步令牌失败", e);
+        }
+    }
+
+    /**
+     * 查看用户的Google日历列表
+     * 
+     * @param userId 用户ID
+     * @return 日历列表
+     * @throws CalendarSyncException 如果获取日历列表失败
+     */
+    public List<CalendarListEntry> listCalendars(String userId) throws CalendarSyncException {
+        try {
+            Credential credential = oAuth2Service.getCredential(userId);
+            if (credential == null) {
+                throw new CalendarSyncException("用户未授权访问Google日历");
+            }
+
+            Calendar.Builder builder = new Calendar.Builder(
+                    httpTransport,
+                    JSON_FACTORY,
+                    credential)
+                    .setApplicationName(applicationName);
+            Calendar authorizedService = builder.build();
+
+            CalendarList calendarList = authorizedService
+                .calendarList()
+                .list()
+                .setOauthToken(credential.getAccessToken())
+                .execute();
+
+            return calendarList.getItems();
+        } catch (Exception e) {
+            log.error("获取日历列表失败", e);
+            throw new CalendarSyncException("无法获取日历列表", e);
+        }
+    }
+
+    /**
+     * 查看指定日历的事件
+     * 
+     * @param userId 用户ID
+     * @param calendarId 日历ID
+     * @return 事件列表
+     * @throws CalendarSyncException 如果获取事件失败
+     */
+    public List<Event> listEvents(String userId, String calendarId) throws CalendarSyncException {
+        try {
+            Credential credential = oAuth2Service.getCredential(userId);
+            if (credential == null) {
+                throw new CalendarSyncException("用户未授权访问Google日历");
+            }
+
+            Calendar.Builder builder = new Calendar.Builder(
+                    httpTransport,
+                    JSON_FACTORY,
+                    credential)
+                    .setApplicationName(applicationName);
+            Calendar authorizedService = builder.build();
+
+            Events events = authorizedService.events().list(calendarId)
+                .setOauthToken(credential.getAccessToken())
+                .setMaxResults(2500)
+                .setOrderBy("startTime")
+                .setSingleEvents(true)
+                .execute();
+
+            return events.getItems();
+        } catch (Exception e) {
+            log.error("获取日历事件失败", e);
+            throw new CalendarSyncException("无法获取日历事件", e);
+        }
+    }
+
+    /**
+     * 删除指定日历中的事件
+     * 
+     * @param userId 用户ID
+     * @param calendarId 日历ID
+     * @param eventId 事件ID
+     * @throws CalendarSyncException 如果删除事件失败
+     */
+    public void deleteEvent(String userId, String calendarId, String eventId) throws CalendarSyncException {
+        try {
+            Credential credential = oAuth2Service.getCredential(userId);
+            if (credential == null) {
+                throw new CalendarSyncException("用户未授权访问Google日历");
+            }
+
+            Calendar.Builder builder = new Calendar.Builder(
+                    httpTransport,
+                    JSON_FACTORY,
+                    credential)
+                    .setApplicationName(applicationName);
+            Calendar authorizedService = builder.build();
+
+            authorizedService.events().delete(calendarId, eventId)
+                .setOauthToken(credential.getAccessToken())
+                .execute();
+
+            log.info("事件 {} 已从日历 {} 中删除", eventId, calendarId);
+        } catch (Exception e) {
+            log.error("删除日历事件失败", e);
+            throw new CalendarSyncException("无法删除日历事件", e);
         }
     }
 } 

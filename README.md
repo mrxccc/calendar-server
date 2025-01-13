@@ -20,7 +20,7 @@
 
 2. 外部日历集成
    - Google Calendar集成
-   - 日历数据同步
+   - Bedework集成
    - 事件冲突检测
 
 3. 用户管理
@@ -32,7 +32,6 @@
 1. **环境准备**：
    - 确保已安装Java 17或更高版本。
    - 确保MySQL数据库已启动，并配置好`src/main/resources/application.properties`中的数据库连接信息。
-   - 确保Redis服务已启动。
 
 2. **构建项目**：
    - 在项目根目录下运行以下命令以构建项目：
@@ -45,7 +44,6 @@
      ```bash
      mvn spring-boot:run
      ```
-   - 应用启动后，访问`http://localhost:8080`查看API文档。
 
 ## 测试方式
 
@@ -64,3 +62,11 @@
 
 ## API文档
 API文档通过Springdoc OpenAPI (Swagger)提供，访问地址：http://localhost:8080/swagger-ui.html 
+
+4.启动Bedework测试CalDav流程 
+**Docker启动Bedework**：
+   - 在项目根目录下运行以下命令启动Bedework服务：
+     ```bash
+     docker-compose up -d bedework
+     ```
+   - 等待服务启动完成后，访问`http://localhost:8080/caladmin`查看Bedework日历服务
