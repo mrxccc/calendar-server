@@ -17,7 +17,7 @@ import java.text.ParseException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/calendars/caldav")
+@RequestMapping()
 @Tag(name = "CalDAV日历管理", description = "CalDAV日历相关的API接口")
 @RequiredArgsConstructor
 @Slf4j
@@ -99,8 +99,8 @@ public class CalDavController {
      * @return
      */
     @GetMapping("/calendars")
-    public List<CalendarCollection> getCalendars() {
-        return calDavService.getCalendarCollections();
+    public List<CalendarCollection> getCalendars(@RequestParam String username,@RequestParam String password) throws IOException {
+        return calDavService.getCalendarCollections(username, password);
     }
 
     /**
@@ -110,7 +110,7 @@ public class CalDavController {
      */
     // 获取单个日历集合详情
     @GetMapping("/calendars/{cid}")
-    public Calendar getCalendar(@PathVariable String cid) {
+    public String getCalendar(@PathVariable String cid) throws IOException {
         return calDavService.getCalendarCollectionDetails(cid);
     }
 } 

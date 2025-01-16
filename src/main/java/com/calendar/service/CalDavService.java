@@ -23,6 +23,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.jackrabbit.webdav.MultiStatusResponse;
 import org.apache.jackrabbit.webdav.property.DavPropertyName;
 import org.apache.jackrabbit.webdav.property.DavPropertyNameSet;
+import org.aspectj.util.FileUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +47,7 @@ import net.fortuna.ical4j.model.property.ProdId;
 import net.fortuna.ical4j.model.property.Summary;
 import net.fortuna.ical4j.model.property.Uid;
 import net.fortuna.ical4j.model.property.Version;
+import org.springframework.web.bind.annotation.RequestParam;
 
 
 @Service
@@ -54,6 +57,16 @@ public class CalDavService {
 
     private final CalendarRepository calendarRepository;
     private final CalendarEventRepository eventRepository;
+
+    @Value("${caldav.server.protocol}")
+    private String protocol;
+
+    @Value("${caldav.server.host}")
+    private String host;
+
+    @Value("${caldav.server.port}")
+    private int port;
+
 
     public void createCalendar(String username, String password, String calendarName) {
         try {
@@ -74,12 +87,11 @@ public class CalDavService {
             // 保存到.ics文件
             String filePath = calendarName + ".ics";
             ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + filePath);
-            File file = new File(filePath);
-            try (FileOutputStream fout = new FileOutputStream(file)) {
+            try (FileOutputStream fout = new FileOutputStream(resource.getFile())) {
                 CalendarOutputter outputter = new CalendarOutputter();
                 outputter.output(calendar, fout);
-                log.info("日历已保存到文件: {}", file.getAbsolutePath());
-                System.out.println("日历已保存到文件: " + file.getAbsolutePath());
+                log.info("日历已保存到文件: {}", resource.getFile().getAbsolutePath());
+                System.out.println("日历已保存到文件: " + resource.getFile().getAbsolutePath());
             }
 
         } catch (Exception e) {
@@ -244,7 +256,7 @@ public class CalDavService {
     public void syncCalendar(String calendarName, String username, String password) {
         try {
             log.info("开始同步CalDAV日历: {}", calendarName);
-            List<CalendarCollection> calendarCollections = getCalendarCollections();
+            List<CalendarCollection> calendarCollections = getCalendarCollections(username, password);
             for (CalendarCollection calendarCollection : calendarCollections) {
                 // 多线程处理google 日历、icloud日历、qq日历等
                 // @todo 校验用户是否存在
@@ -258,47 +270,55 @@ public class CalDavService {
         }
     }
 
-    // 获取日历集合
-    public List<CalendarCollection> getCalendarCollections() {
+    /**
+     * 获取日历集合
+     * @param username
+     * @param password
+     * @return
+     * @throws IOException
+     */
+    public List<CalendarCollection> getCalendarCollections(String username, String password) throws IOException {
         List<CalendarCollection> calendarCollections = new ArrayList<>();
+        // @todo 校验用户是否存在
+        // @todo 鉴权：校验用户名密码
+        // @todo 校验日历是否存在
+        // @todo 两种方案获取.ics文件
+        //  1..ics文件通过对象存储文件系统保存到数据库后，查询数据库获取用户所有日历系统日历集合，获取url集合
+        //  2.这里为了简便先将.ics保存在本地，假设 .ics 文件存放在 resources 目录下
+        String cid = "singleEvent";
+        ClassPathResource resource = new ClassPathResource("icalendar");
+        File icalendarDir = resource.getFile();
 
-        try {
-            // 假设 .ics 文件存放在 resources 目录下
-            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + "singleEvent" + ".ics");
-            FileInputStream fin = new FileInputStream(resource.getFile());
-            CalendarBuilder builder = new CalendarBuilder();
-            Calendar calendar = builder.build(fin);
-
-            // 获取事件（VEVENT）并生成日历集合
-            for (Object component : calendar.getComponents(VEvent.VEVENT)) {
-                VEvent event = (VEvent) component;
+        if (icalendarDir != null && icalendarDir.exists()){
+            File icalendarFile =  new File(icalendarDir.getAbsolutePath() + System.getProperty("file.separator"));
+            File[] files = icalendarFile.listFiles();
+            for (File file : files) {
+                String fullUrl = String.format("%s://%s:%d/calendars/%s", protocol, host, port, file.getName());
                 CalendarCollection collection = new CalendarCollection();
-                collection.setDisplayName(event.getSummary().getValue()); // 事件的概要作为日历名称
-                collection.setHref("calendar/" + event.getUid().getValue()); // 通过 UID 生成日历链接
+                collection.setDisplayName(cid);
+                collection.setHref(fullUrl);
                 calendarCollections.add(collection);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ParserException e) {
-            throw new RuntimeException(e);
+        } else {
+            throw new IOException("文件不存在");
         }
-
         return calendarCollections;
     }
 
     // 根据 UID 获取单个日历集合的详细信息
-    public Calendar getCalendarCollectionDetails(String cid) {
+    public String getCalendarCollectionDetails(String cid) throws IOException {
         Calendar calendar = null;
         try {
             // 假设 .ics 文件存放在 resources 目录下
-            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + cid + ".ics");
+            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + cid);
             CalendarBuilder builder = new CalendarBuilder();
             calendar = builder.build(resource.getInputStream());
+            System.out.println(calendar.toString());
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IOException("文件不存在");
         } catch (ParserException e) {
             throw new RuntimeException(e);
         }
-        return calendar;
+        return calendar.toString();
     }
 }

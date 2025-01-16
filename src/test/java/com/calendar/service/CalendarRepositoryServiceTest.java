@@ -15,10 +15,10 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-public class CalendarServiceTest {
+public class CalendarRepositoryServiceTest {
 
     @Autowired
-    private CalendarService calendarService;
+    private CalendarRepositoryService calendarRepositoryService;
 
     @MockBean
     private CalendarRepository calendarRepository;
@@ -34,7 +34,7 @@ public class CalendarServiceTest {
         when(calendarRepository.findAll()).thenReturn(Arrays.asList(calendar));
 
         // When
-        List<CalendarDo> result = calendarService.getAllCalendars();
+        List<CalendarDo> result = calendarRepositoryService.getAllCalendars();
 
         // Then
         assertNotNull(result);

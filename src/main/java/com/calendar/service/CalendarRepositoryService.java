@@ -14,7 +14,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class CalendarService {
+public class CalendarRepositoryService {
     
     private final CalendarRepository calendarRepository;
     private final CalendarEventRepository eventRepository;
