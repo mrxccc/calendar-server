@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.DateTime;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -110,7 +111,17 @@ public class CalDavController {
      */
     // 获取单个日历集合详情
     @GetMapping("/calendars/{cid}")
-    public String getCalendar(@PathVariable String cid) throws IOException {
-        return calDavService.getCalendarCollectionDetails(cid);
+    public ResponseEntity<byte[]> getCalendar(@PathVariable String cid) throws IOException {
+
+
+        // 设置文件名和响应头
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + cid);
+        headers.add(HttpHeaders.CONTENT_TYPE, "text/calendar"); // 设置文件类型
+
+        // 返回文件内容
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(calDavService.getCalendarCollectionDetailsByte(cid));
     }
 } 

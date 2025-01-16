@@ -321,4 +321,26 @@ public class CalDavService {
         }
         return calendar.toString();
     }
+
+    // 根据 UID 获取单个日历集合的详细信息
+    public byte[] getCalendarCollectionDetailsByte(String cid) throws IOException {
+        Calendar calendar = null;
+        try {
+            // 假设 .ics 文件存放在 resources 目录下
+            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + cid);
+            CalendarBuilder builder = new CalendarBuilder();
+            calendar = builder.build(resource.getInputStream());
+            System.out.println(calendar.toString());
+
+            byte[] fileContent = new byte[(int) resource.getFile().length()];
+            try (InputStream inputStream = new FileInputStream(resource.getFile())) {
+                inputStream.read(fileContent);
+            }
+            return fileContent;
+        } catch (IOException e) {
+            throw new IOException("文件不存在");
+        } catch (ParserException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
