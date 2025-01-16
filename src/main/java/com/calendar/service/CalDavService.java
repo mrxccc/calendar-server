@@ -287,34 +287,18 @@ public class CalDavService {
     }
 
     // 根据 UID 获取单个日历集合的详细信息
-    public CalendarCollection getCalendarCollectionDetails(String uid) {
-        CalendarCollection calendarCollection = null;
-
+    public Calendar getCalendarCollectionDetails(String cid) {
+        Calendar calendar = null;
         try {
             // 假设 .ics 文件存放在 resources 目录下
-            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + "singleEvent" + ".ics");
+            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + cid + ".ics");
             CalendarBuilder builder = new CalendarBuilder();
-            Calendar calendar = builder.build(resource.getInputStream());
-
-            // 遍历事件，找到匹配的 UID
-            for (Object component : calendar.getComponents(VEvent.VEVENT)) {
-                VEvent event = (VEvent) component;
-                if (event.getUid().getValue().equals(uid)) {
-                    calendarCollection = new CalendarCollection();
-                    calendarCollection.setDisplayName(event.getSummary().getValue());
-                    calendarCollection.setHref("calendar/" + event.getUid().getValue());
-                    calendarCollection.setDescription(event.getDescription().getValue());
-                    calendarCollection.setLocation(event.getLocation() != null ? event.getLocation().getValue() : "");
-                    calendarCollection.setStartTime(event.getStartDate().getDate().toString());
-                    calendarCollection.setEndTime(event.getEndDate().getDate().toString());
-                }
-            }
+            calendar = builder.build(resource.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ParserException e) {
             throw new RuntimeException(e);
         }
-
-        return calendarCollection;
+        return calendar;
     }
 }

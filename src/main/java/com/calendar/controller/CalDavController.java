@@ -105,12 +105,12 @@ public class CalDavController {
 
     /**
      * 获取单个日历集合
-     * @param uid
+     * @param cid 日历集合名称
      * @return
      */
     // 获取单个日历集合详情
-    @GetMapping("/calendars/{uid}")
-    public CalendarCollection getCalendar(@PathVariable String uid) {
-        return calDavService.getCalendarCollectionDetails(uid);
+    @GetMapping("/calendars/{cid}")
+    public Calendar getCalendar(@PathVariable String cid) {
+        return calDavService.getCalendarCollectionDetails(cid);
     }
 } 
