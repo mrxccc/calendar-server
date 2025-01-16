@@ -1,15 +1,31 @@
 package com.calendar.service;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import com.calendar.credential.CaldavCredential;
 
+import com.calendar.model.CalendarCollection;
+import com.github.caldav4j.CalDAVCollection;
+import com.github.caldav4j.CalDAVConstants;
+import com.github.caldav4j.methods.HttpCalDAVReportMethod;
+import com.github.caldav4j.model.request.CalendarData;
+import com.github.caldav4j.model.request.CalendarQuery;
+import com.github.caldav4j.model.request.CompFilter;
+import com.github.caldav4j.model.response.CalendarDataProperty;
+import com.github.caldav4j.util.XMLUtils;
+import net.fortuna.ical4j.model.Component;
+import org.apache.http.HttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.jackrabbit.webdav.MultiStatusResponse;
+import org.apache.jackrabbit.webdav.property.DavPropertyName;
+import org.apache.jackrabbit.webdav.property.DavPropertyNameSet;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import com.calendar.model.CalendarEntity;
 import com.calendar.repository.CalendarEventRepository;
 import com.calendar.repository.CalendarRepository;
 
@@ -29,6 +45,7 @@ import net.fortuna.ical4j.model.property.ProdId;
 import net.fortuna.ical4j.model.property.Summary;
 import net.fortuna.ical4j.model.property.Uid;
 import net.fortuna.ical4j.model.property.Version;
+
 
 @Service
 @Slf4j
@@ -56,6 +73,7 @@ public class CalDavService {
 
             // 保存到.ics文件
             String filePath = calendarName + ".ics";
+            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + filePath);
             File file = new File(filePath);
             try (FileOutputStream fout = new FileOutputStream(file)) {
                 CalendarOutputter outputter = new CalendarOutputter();
@@ -138,4 +156,165 @@ public class CalDavService {
         }
     }
 
-} 
+//    public String queryCalendar(){
+//        // Create a set of Dav Properties to query
+//        DavPropertyNameSet properties = new DavPropertyNameSet();
+//        properties.add(DavPropertyName.GETETAG);
+//
+//        // Create a Component filter for VCALENDAR and VEVENT
+//        CompFilter vcalendar = new CompFilter(Calendar.VCALENDAR);
+//        vcalendar.addCompFilter(new CompFilter(Component.VEVENT));
+//
+//        // Create a Query XML object with the above properties
+//        CalendarQuery query = new CalendarQuery(properties, vcalendar, new CalendarData(), false, false);
+//
+//		/*
+//		<C:calendar-query xmlns:C="urn:ietf:params:xml:ns:caldav">
+//		  <D:prop xmlns:D="DAV:">
+//		    <D:getetag/>
+//		    <C:calendar-data/>
+//		  </D:prop>
+//		  <C:filter>
+//		    <C:comp-filter name="VCALENDAR">
+//		      <C:comp-filter name="VEVENT"/>
+//		    </C:comp-filter>
+//		  </C:filter>
+//		</C:calendar-query>
+//		*/
+//        // Print to STDOUT the generated Query
+//        System.out.println(XMLUtils.prettyPrint(query));
+//
+//        HttpCalDAVReportMethod method = null;
+//
+//        try {
+//            method = new HttpCalDAVReportMethod("path://to/caldav/calendar", query, CalDAVConstants.DEPTH_1);
+//            CloseableHttpClient client = HttpClients.createDefault();
+//
+//            // Execute the method
+//            HttpResponse httpResponse = client.execute(method);
+//
+//            // If successful
+//            if (method.succeeded(httpResponse)) {
+//                // Retrieve all multistatus responses
+//                MultiStatusResponse[] multiStatusResponses = method.getResponseBodyAsMultiStatus(httpResponse).getResponses();
+//
+//                // Iterate through all responses
+//                for (MultiStatusResponse response : multiStatusResponses) {
+//                    // If the individual calendar request was succesful
+//                    if (response.getStatus()[0].getStatusCode() == SC_OK) {
+//                        // Retrieve ETag and  Calendar from response
+//                        String etag = CalendarDataProperty.getEtagfromResponse(response);
+//                        Calendar ical = CalendarDataProperty.getCalendarfromResponse(response);
+//
+//                        // Print to output
+//                        System.out.println("Calendar at " + response.getHref() + " with ETag: " + etag);
+//                        System.out.println(ical);
+//                    }
+//                }
+//            }
+//
+//        } catch (Exception e) {
+//            log.info(e.getMessage(), e);
+//            // No-op
+//        } finally {
+//            if (method != null) {
+//                method.reset();
+//            }
+//        }
+//        return "Response";
+//    }
+
+    public Calendar queryCalendar(String calendarName){
+        // 读取现有的.ics文件
+        // 使用 ClassPathResource 加载资源文件
+        ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + calendarName + ".ics");
+        Calendar calendar;
+        try (FileInputStream fin = new FileInputStream(resource.getFile())) {
+            CalendarBuilder builder = new CalendarBuilder();
+            calendar = builder.build(fin);
+            System.out.println(calendar.toString());
+        } catch (ParserException | FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return calendar;
+    }
+
+    public void syncCalendar(String calendarName, String username, String password) {
+        try {
+            log.info("开始同步CalDAV日历: {}", calendarName);
+            List<CalendarCollection> calendarCollections = getCalendarCollections();
+            for (CalendarCollection calendarCollection : calendarCollections) {
+                // 多线程处理google 日历、icloud日历、qq日历等
+                // @todo 校验用户是否存在
+                // @todo 鉴权：校验用户名密码
+                // @todo 校验日历是否存在
+                // @todo 请求各个日历系统日历数据，保存到本地.ics文件或者数据库中
+            }
+        } catch (Exception e) {
+            log.error("同步CalDAV日历失败: {}", e.getMessage());
+            throw new RuntimeException("同步CalDAV日历失败", e);
+        }
+    }
+
+    // 获取日历集合
+    public List<CalendarCollection> getCalendarCollections() {
+        List<CalendarCollection> calendarCollections = new ArrayList<>();
+
+        try {
+            // 假设 .ics 文件存放在 resources 目录下
+            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + "singleEvent" + ".ics");
+            FileInputStream fin = new FileInputStream(resource.getFile());
+            CalendarBuilder builder = new CalendarBuilder();
+            Calendar calendar = builder.build(fin);
+
+            // 获取事件（VEVENT）并生成日历集合
+            for (Object component : calendar.getComponents(VEvent.VEVENT)) {
+                VEvent event = (VEvent) component;
+                CalendarCollection collection = new CalendarCollection();
+                collection.setDisplayName(event.getSummary().getValue()); // 事件的概要作为日历名称
+                collection.setHref("calendar/" + event.getUid().getValue()); // 通过 UID 生成日历链接
+                calendarCollections.add(collection);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParserException e) {
+            throw new RuntimeException(e);
+        }
+
+        return calendarCollections;
+    }
+
+    // 根据 UID 获取单个日历集合的详细信息
+    public CalendarCollection getCalendarCollectionDetails(String uid) {
+        CalendarCollection calendarCollection = null;
+
+        try {
+            // 假设 .ics 文件存放在 resources 目录下
+            ClassPathResource resource = new ClassPathResource("icalendar" + System.getProperty("file.separator") + "singleEvent" + ".ics");
+            CalendarBuilder builder = new CalendarBuilder();
+            Calendar calendar = builder.build(resource.getInputStream());
+
+            // 遍历事件，找到匹配的 UID
+            for (Object component : calendar.getComponents(VEvent.VEVENT)) {
+                VEvent event = (VEvent) component;
+                if (event.getUid().getValue().equals(uid)) {
+                    calendarCollection = new CalendarCollection();
+                    calendarCollection.setDisplayName(event.getSummary().getValue());
+                    calendarCollection.setHref("calendar/" + event.getUid().getValue());
+                    calendarCollection.setDescription(event.getDescription().getValue());
+                    calendarCollection.setLocation(event.getLocation() != null ? event.getLocation().getValue() : "");
+                    calendarCollection.setStartTime(event.getStartDate().getDate().toString());
+                    calendarCollection.setEndTime(event.getEndDate().getDate().toString());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParserException e) {
+            throw new RuntimeException(e);
+        }
+
+        return calendarCollection;
+    }
+}
