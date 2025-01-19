@@ -23,7 +23,6 @@ import net.fortuna.ical4j.util.CompatibilityHints;
 /**
  * A {@code CalDavDialect} for Chandler's Cosmo CalDAV server.
  *
- * @author <a href="mailto:markhobson@gmail.com">Mark Hobson</a>
  * @version $Id$
  */
 public class ChandlerCalDavDialect implements CalDavDialect {

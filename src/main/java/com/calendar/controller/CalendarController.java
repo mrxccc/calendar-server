@@ -2,12 +2,10 @@ package com.calendar.controller;
 
 import com.calendar.model.CalendarCollection;
 import com.calendar.service.CalDavService;
-import com.github.caldav4j.CalDAVCollection;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.DateTime;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +20,7 @@ import java.util.List;
 @Tag(name = "CalDAV日历管理", description = "CalDAV日历相关的API接口")
 @RequiredArgsConstructor
 @Slf4j
-public class CalDavController {
+public class CalendarController {
 
     private final CalDavService calDavService;
 

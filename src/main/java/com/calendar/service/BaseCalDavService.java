@@ -16,9 +16,14 @@
  */
 package com.calendar.service;
 
+import com.calendar.credential.CalDavFixture;
 import com.calendar.credential.CaldavCredential;
 import com.calendar.dialect.CalDavDialect;
 import com.calendar.dialect.ChandlerCalDavDialect;
+import com.github.caldav4j.CalDAVCollection;
+import net.fortuna.ical4j.data.CalendarBuilder;
+import net.fortuna.ical4j.model.Calendar;
+import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
@@ -28,17 +33,20 @@ import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+
 public abstract class BaseCalDavService {
 
-    protected static final Logger log = LoggerFactory.getLogger(BaseCalDavService.class);
+    protected CaldavCredential caldavCredential = new CaldavCredential(System.getProperty("caldav4jUri", null));
 
-    protected CaldavCredential caldavCredential =
-            new CaldavCredential(System.getProperty("caldav4jUri", null));
+    protected CalDavDialect caldavDialect;
 
-    protected CalDavDialect caldavDialect = new ChandlerCalDavDialect();
+    protected CalDavFixture fixture;
 
-    // constructor
-    public BaseCalDavService() {}
+    public void setUp() {
+        fixture = new CalDavFixture();
+        fixture.setUp(caldavCredential, caldavDialect);
+    }
 
     public BaseCalDavService(CaldavCredential credential, CalDavDialect dialect) {
         this.caldavCredential = credential;
@@ -58,4 +66,19 @@ public abstract class BaseCalDavService {
 
         return HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
     }
+
+    public static HttpClient createHttpClientWithNoCredentials() {
+        return HttpClients.createDefault();
+    }
+
+    public HttpHost createHostConfiguration() {
+        return createHostConfiguration(this.caldavCredential);
+    }
+
+    public static HttpHost createHostConfiguration(CaldavCredential caldavCredential) {
+        return new HttpHost(
+                caldavCredential.host, caldavCredential.port, caldavCredential.protocol);
+    }
+
+
 }

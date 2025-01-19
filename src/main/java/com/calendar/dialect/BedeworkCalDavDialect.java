@@ -22,7 +22,6 @@ import net.fortuna.ical4j.model.property.ProdId;
 /**
  * A {@code CalDavDialect} for Bedework CalDAV server.
  *
- * @author <a href="mailto:robipolli@gmail.com">Roberto Polli</a>
  * @version
  */
 public class BedeworkCalDavDialect implements CalDavDialect {

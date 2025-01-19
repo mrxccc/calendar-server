@@ -36,16 +36,6 @@ public class BedeworkCalendarService extends BaseCalDavService {
         super(new BedeworkCaldavCredential(), new BedeworkCalDavDialect());
     }
 
-    public void printBedeworkCalendar() throws IOException {
-        HttpMkCalendarMethod mk =
-                new HttpMkCalendarMethod(
-                        caldavCredential.home + caldavCredential.collection,
-                        "My display Name",
-                        "this is my default calendar",
-                        "en");
-        mk.getEntity().writeTo(System.out);
-    }
-
     public String getCalendar() throws IOException {
         HttpClient httpClient = createHttpClient();
         String fullUrl =  caldavCredential.protocol + "://"  + caldavCredential.host +  ":" + caldavCredential.port + caldavCredential.home;

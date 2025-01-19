@@ -23,6 +23,7 @@
         <google-oauth-client-jetty.version>1.34.1</google-oauth-client-jetty.version>
         <google-auth-library-oauth2-http.version>1.19.0</google-auth-library-oauth2-http.version>
         <springdoc-openapi.version>2.1.0</springdoc-openapi.version>
+        <milton.version>4.0.5.2400</milton.version>
     </properties>
 
     <dependencies>
@@ -152,8 +153,20 @@
             <version>4.0.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.milton</groupId>
+            <artifactId>milton-server-ce</artifactId>
+            <version>${milton.version}</version>
+        </dependency>
     </dependencies>
 
+
+    <repositories>
+        <repository>
+            <id>milton-repo</id>
+            <url>http://milton.io/maven/</url>
+        </repository>
+    </repositories>
     <build>
         <plugins>
             <plugin>

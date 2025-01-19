@@ -10,18 +10,18 @@ import org.springframework.data.redis.core.RedisTemplate;
 /**
  * Redis配置类
  */
-@Configuration
-public class RedisConfig {
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-        return template;
-    }
-
-    @Bean
-    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        return RedisCacheManager.builder(connectionFactory).build();
-    }
-} 
+//@Configuration
+//public class RedisConfig {
+//
+//    @Bean
+//    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+//        RedisTemplate<String, Object> template = new RedisTemplate<>();
+//        template.setConnectionFactory(connectionFactory);
+//        return template;
+//    }
+//
+//    @Bean
+//    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+//        return RedisCacheManager.builder(connectionFactory).build();
+//    }
+//}

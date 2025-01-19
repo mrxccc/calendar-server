@@ -20,17 +20,18 @@ import net.fortuna.ical4j.model.property.CalScale;
 import net.fortuna.ical4j.model.property.ProdId;
 
 /**
- * A {@code CalDavDialect} for Google CalDAV server.
+ * A {@code CalDavDialect} for feishu CalDAV server.
  *
+ * @version
  */
-public class GoogleCalDavDialect implements CalDavDialect {
+public class FeishuCalDavDialect implements CalDavDialect {
     // constants --------------------------------------------------------------
 
-    private static final String PROD_ID_VALUE = "-//Google Inc//Google Calendar 70.9054//EN";
+    private static final String PROD_ID_VALUE = "feishu";
 
     // constructors -----------------------------------------------------------
 
-    public GoogleCalDavDialect() {
+    public FeishuCalDavDialect() {
         // CompatibilityHints.setHintEnabled(CompatibilityHints.KEY_RELAXED_UNFOLDING, true);
     }
 
@@ -43,11 +44,11 @@ public class GoogleCalDavDialect implements CalDavDialect {
 
     /** {@inheritDoc} */
     public CalScale getDefaultCalScale() {
-        return CalScale.GREGORIAN;
+        return null;
     }
 
     @Override
     public boolean isCreateCollection() {
-        return false;
+        return true;
     }
 }
