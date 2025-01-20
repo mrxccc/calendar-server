@@ -3,6 +3,7 @@ package com.calendar.service;
 import com.calendar.credential.FeishuCaldavCredential;
 import com.calendar.dialect.FeishuCalDavDialect;
 import com.github.caldav4j.methods.HttpPropFindMethod;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -38,7 +39,8 @@ public class FeishuCalendarService extends BaseCalDavService {
     }
 
 
-    public String generatePropfindResponse() throws IOException, DavException, ParserConfigurationException, TransformerException {
+    @SneakyThrows
+    public String propFindDisplayName(){
         HttpClient http = fixture.getHttpClient();
         HttpHost hostConfig = fixture.getHostConfig();
         DavPropertyNameSet props = new DavPropertyNameSet();
@@ -48,7 +50,6 @@ public class FeishuCalendarService extends BaseCalDavService {
 
         HttpResponse response = http.execute(hostConfig, p);
         return print_Xml(p.getResponseBodyAsMultiStatus(response));
-
     }
 
     private String print_Xml(XmlSerializable ace)
