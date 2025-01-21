@@ -1,0 +1,80 @@
+cosmo:
+  tickets: 
+    serverSecret: 73d320ab-e7d3-4183-9a62-9628e5efe181 
+    serverInteger: 163184592    
+  caldav:   
+     schedulingEnabled: true
+  event:
+    validation:
+      allowed:
+        recurrence:
+          frequencies: DAILY,WEEKLY,MONTHLY,YEARLY,SECONDLY
+      summary:
+       min:
+        length: 0
+       max: 
+        length: 2137483647
+      location:
+       min:
+        length: 0
+       max: 
+        length: 2137483647
+      description:
+       min:
+        length: 0
+       max: 
+        length: 2137483647
+      attendees:
+         max:
+           length: 100
+      icaldata:
+         #1 MB in bytes
+         max:
+          length: 1048576         
+  user:
+    password:
+      min:
+        length: 5
+      max:
+        length: 25
+
+# Connection timeout for reaching external content when validation is performed (in millis) 
+external:
+  content:
+    connection:
+      timeout: 10000
+    size: 1048576
+    non:
+      proxyed:
+        hosts:
+    user-agent: COSMO      
+calendar: 
+  server:
+   productId: COSMO
+      
+server:
+  port: 8080
+  servlet:
+    context-path: /cosmo
+spring:
+  application:
+    name: cosmo-webapp
+  profiles:
+    active: local
+  datasource:
+    jdbc-url: jdbc:mariadb://localhost:3306/test?useSSL=false
+    username: root
+    password: Xc58525456
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    properties:
+     hibernate.cache.use_query_cache: false
+     hibernate.cache.use_second_level_cache: false
+     hibernate.show_sql: false
+     hibernate.hbm2ddl.auto: create
+     hibernate.id.new_generator_mappings: false
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
